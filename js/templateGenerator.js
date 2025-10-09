@@ -11,7 +11,7 @@
  */
 function generateReportOpeningHTML(reportName, reportDate) {
     return `<div style="font-family: Calibri, Arial, sans-serif; font-size: 11pt;">
-    <img src="../images/banner-opening.png" style="width: 100%; max-width: 900px; display: block; margin-bottom: 20px;" alt="Critical Notification">
+    <img src="images/banner-opening.png" style="width: 100%; max-width: 900px; display: block; margin-bottom: 20px;" alt="Critical Notification">
     <p style="margin-bottom: 15px;">This is to inform you that our monitoring systems have detected: The report <b>${reportName}</b> for <b>${reportDate}</b> is being delayed.</p>
     <p style="margin-bottom: 15px;"><u>Impact Description:</u> The report ${reportName} for ${reportDate} is being delayed.</p>
     <p style="margin-bottom: 15px;"><u>Root Cause:</u> Under NG BI team investigation.</p>
@@ -28,7 +28,7 @@ function generateReportOpeningHTML(reportName, reportDate) {
  */
 function generateReportResolvedHTML(reportName, reportDate) {
     return `<div style="font-family: Calibri, Arial, sans-serif; font-size: 11pt;">
-    <img src="../images/banner-resolved.png" style="width: 100%; max-width: 900px; display: block; margin-bottom: 20px;" alt="Critical Notification - Resolved">
+    <img src="images/banner-resolved.png" style="width: 100%; max-width: 900px; display: block; margin-bottom: 20px;" alt="Critical Notification - Resolved">
     <p style="margin-bottom: 15px;">This is to inform you that our monitoring systems have detected: The report <b>${reportName}</b> for <b>${reportDate}</b> is being delayed. <b>The issue has been resolved.</b></p>
     <p style="margin-bottom: 15px;"><u>Impact Description:</u> The report ${reportName} for ${reportDate} is being delayed.</p>
     <p style="margin-bottom: 15px;"><u>Root Cause:</u> Under NG BI team investigation.</p>
@@ -51,7 +51,7 @@ function generateSystemOpeningHTML(issueDescription, startTime, rootCause) {
     }
     
     return `<div style="font-family: Calibri, Arial, sans-serif; font-size: 11pt;">
-    <img src="../images/banner-opening.png" style="width: 100%; max-width: 900px; display: block; margin-bottom: 20px;" alt="Critical Notification">
+    <img src="images/banner-opening.png" style="width: 100%; max-width: 900px; display: block; margin-bottom: 20px;" alt="Critical Notification">
     <p style="margin-bottom: 15px;">This is to inform you that our monitoring systems have detected: <b>${issueDescription}</b>.</p>
     ${timeText ? `<p style="margin-bottom: 15px;">${timeText}</p>` : ''}
     <p style="margin-bottom: 15px;"><u>Impact description:</u> ${issueDescription}.</p>
@@ -71,7 +71,7 @@ function generateSystemOpeningHTML(issueDescription, startTime, rootCause) {
  */
 function generateSystemResolvedHTML(issueDescription, startTime, endTime, rootCause) {
     return `<div style="font-family: Calibri, Arial, sans-serif; font-size: 11pt;">
-    <img src="../images/banner-resolved.png" style="width: 100%; max-width: 900px; display: block; margin-bottom: 20px;" alt="Critical Notification - Resolved">
+    <img src="images/banner-resolved.png" style="width: 100%; max-width: 900px; display: block; margin-bottom: 20px;" alt="Critical Notification - Resolved">
     <p style="margin-bottom: 15px;">This is to inform you that our monitoring systems have detected: <b>${issueDescription}</b>.</p>
     <p style="margin-bottom: 15px;"><b>The issue has been resolved.</b></p>
     ${startTime ? `<p style="margin-bottom: 15px;"><u>Start time:</u> ${startTime}.</p>` : ''}
