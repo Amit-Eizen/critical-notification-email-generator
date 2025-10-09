@@ -81,4 +81,4 @@ function generateSystemResolvedHTML(issueDescription, startTime, endTime, rootCa
     <p style="margin-bottom: 15px;">More details will be provided in the Incident Report.</p>
     <p>Regards,</p>
 </div>`;
-}ןעכ
+}
