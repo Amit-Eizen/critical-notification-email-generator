@@ -1,7 +1,55 @@
 /**
  * Utility Functions
- * Helper functions for date formatting and GMT detection
+ * Helper functions for date formatting, timezone conversion, and GMT detection
  */
+
+/**
+ * Environment to Timezone mapping
+ */
+const ENVIRONMENT_TIMEZONES = {
+    // USA - Eastern Time
+    'NCEL': { timezone: 'America/New_York', format: 'us' },
+    'NHL': { timezone: 'America/New_York', format: 'us' },
+    'VAL': { timezone: 'America/New_York', format: 'us' },
+    'WVL': { timezone: 'America/New_York', format: 'us' },
+    'IGT Georgia': { timezone: 'America/New_York', format: 'us' },
+    
+    // USA - Central Time
+    'MSL': { timezone: 'America/Detroit', format: 'us' },
+    
+    // Canada
+    'AGLC': { timezone: 'America/Edmonton', format: 'us' },
+    'ALC': { timezone: 'America/Halifax', format: 'us' },
+    
+    // Europe
+    'Sazka': { timezone: 'Europe/Prague', format: 'eu' },
+    'Sisal IT': { timezone: 'Europe/Rome', format: 'eu' },
+    'Win2Day': { timezone: 'Europe/Vienna', format: 'eu' },
+    'OPAP': { timezone: 'Europe/Athens', format: 'eu' },
+    'SzZrt': { timezone: 'Europe/Budapest', format: 'eu' },
+    'Olifeja': { timezone: 'Europe/Vilnius', format: 'eu' },
+    'JSC': { timezone: 'Europe/Lisbon', format: 'eu' },
+    
+    // South America
+    'LM': { timezone: 'America/Sao_Paulo', format: 'eu' },
+    
+    // Turkey
+    'Sisal TR': { timezone: 'Europe/Istanbul', format: 'eu' },
+    'Bitalih': { timezone: 'Europe/Istanbul', format: 'eu' },
+    'Hipodorm': { timezone: 'Europe/Istanbul', format: 'eu' },
+    
+    // Default (Israel)
+    'default': { timezone: 'Asia/Jerusalem', format: 'eu' }
+};
+
+/**
+ * Get timezone info for environment
+ * @param {string} environment - Environment code
+ * @returns {object} Timezone info
+ */
+function getTimezoneInfo(environment) {
+    return ENVIRONMENT_TIMEZONES[environment] || ENVIRONMENT_TIMEZONES['default'];
+}
 
 /**
  * Format date to "Month DDth" format
@@ -22,39 +70,78 @@ function formatDate(dateString) {
 }
 
 /**
- * Format datetime with automatic GMT offset detection
- * @param {string} datetimeString - Datetime in ISO format
- * @returns {string} Formatted datetime with GMT offset (e.g., "08/10/2025 04:15(GMT +3)")
+ * Format datetime with automatic timezone conversion
+ * @param {string} datetimeString - Datetime in ISO format (local time)
+ * @param {string} environment - Environment code for timezone
+ * @returns {string} Formatted datetime with GMT offset
  */
-function formatDateTime(datetimeString) {
+function formatDateTime(datetimeString, environment) {
     if (!datetimeString) return '';
     
     const date = new Date(datetimeString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const tzInfo = getTimezoneInfo(environment);
     
-    // Auto-detect GMT offset based on DST (Israel timezone)
-    const gmtOffset = getGMTOffset(date);
+    // Convert to target timezone
+    const options = {
+        timeZone: tzInfo.timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: tzInfo.format === 'us' // Use 12-hour format for US/Canada
+    };
     
-    return `${day}/${month}/${year} ${hours}:${minutes}(GMT ${gmtOffset})`;
+    const formatter = new Intl.DateTimeFormat('en-US', options);
+    const parts = formatter.formatToParts(date);
+    
+    const dateParts = {};
+    parts.forEach(({ type, value }) => {
+        dateParts[type] = value;
+    });
+    
+    // Format date based on region
+    let dateStr;
+    if (tzInfo.format === 'us') {
+        // MM/DD/YYYY for US/Canada
+        dateStr = `${dateParts.month}/${dateParts.day}/${dateParts.year}`;
+    } else {
+        // DD/MM/YYYY for rest of world
+        dateStr = `${dateParts.day}/${dateParts.month}/${dateParts.year}`;
+    }
+    
+    // Format time with AM/PM for US
+    let timeStr;
+    if (tzInfo.format === 'us') {
+        timeStr = `${dateParts.hour}:${dateParts.minute} ${dateParts.dayPeriod}`;
+    } else {
+        timeStr = `${dateParts.hour}:${dateParts.minute}`;
+    }
+    
+    // Get GMT offset for the specific date
+    const gmtOffset = getGMTOffsetForTimezone(date, tzInfo.timezone);
+    
+    return `${dateStr} ${timeStr}(GMT ${gmtOffset})`;
 }
 
 /**
- * Detect GMT offset based on Daylight Saving Time
- * @param {Date} date - Date object to check
- * @returns {string} GMT offset ("+2" or "+3")
+ * Get GMT offset for a specific timezone and date
+ * @param {Date} date - Date to check
+ * @param {string} timezone - IANA timezone name
+ * @returns {string} GMT offset (e.g., "+3", "-5")
  */
-function getGMTOffset(date) {
-    const isDST = (date) => {
-        const jan = new Date(date.getFullYear(), 0, 1);
-        const jul = new Date(date.getFullYear(), 6, 1);
-        return date.getTimezoneOffset() < Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset());
-    };
+function getGMTOffsetForTimezone(date, timezone) {
+    const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const tzDate = new Date(date.toLocaleString('en-US', { timeZone: timezone }));
     
-    return isDST(date) ? '+3' : '+2';
+    const offsetMinutes = (tzDate - utcDate) / (1000 * 60);
+    const offsetHours = offsetMinutes / 60;
+    
+    if (offsetHours >= 0) {
+        return `+${Math.abs(offsetHours)}`;
+    } else {
+        return `-${Math.abs(offsetHours)}`;
+    }
 }
 
 /**

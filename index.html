@@ -41,7 +41,24 @@
                         </select>
                         <div class="custom-field" id="customEnvDiv">
                             <input type="text" id="customEnv" placeholder="Enter custom environment prefix">
-                        </div>
+                        </div>  
+                    </div>
+                    <div class="form-group hidden" id="nglSiteGroup">
+                        <label for="nglSite">NGL Site</label>
+                        <select id="nglSite">
+                            <option value="">-- Select NGL Site --</option>
+                            <option value="Sisal IT">Sisal IT (Italy)</option>
+                            <option value="Sisal TR">Sisal TR (Turkey)</option>
+                            <option value="Olifeja">Olifeja (Lithuania)</option>
+                            <option value="Win2Day">Win2Day (Austria)</option>
+                            <option value="OPAP">OPAP (Greece)</option>
+                            <option value="SzZrt">SzZrt (Hungary)</option>
+                            <option value="Bitalih">Bitalih (Turkey)</option>
+                            <option value="Hipodorm">Hipodrom (Turkey)</option>
+                            <option value="JSC">JSC (Portugal)</option>
+                            <option value="UNL">UNL (Ukraine)</option>
+                            <option value="PariPlay/888">PariPlay/888</option>
+                        </select>
                     </div>
                     
                     <div class="form-group">
@@ -85,6 +102,11 @@
                             </div>
                         </div>
                         
+                        <div class="form-group hidden" id="percentageGroup">
+                            <label for="percentageInput">Percentage (%)</label>
+                            <input type="number" id="percentageInput" placeholder="Enter percentage (e.g., 15)" min="0" max="100">
+                        </div>
+                        
                         <div class="form-group">
                             <label for="startTime">Start Time (Optional for Opening)</label>
                             <input type="datetime-local" id="startTime">
@@ -99,7 +121,7 @@
                             <label for="rootCause">Root Cause</label>
                             <select id="rootCause">
                                 <option value="">-- Select Root Cause --</option>
-                                <option value="Under NG BI team investigation">Under NG BI team investigation</option>
+                                <option value="Under NG teams investigation">Under NG teams investigation</option>
                                 <option value="We have reached out to [Provider] and are awaiting their response" selected>We have reached out to [Provider] and are awaiting their response</option>
                                 <option value="other">Other (Custom)</option>
                             </select>

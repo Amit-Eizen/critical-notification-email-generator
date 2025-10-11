@@ -184,7 +184,7 @@ input:focus, select:focus, textarea:focus {
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
-    transition: transform 0.2s;
+    transition: all 0.3s ease;
     margin-top: 10px;
 }
 

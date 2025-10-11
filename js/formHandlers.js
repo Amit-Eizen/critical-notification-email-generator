@@ -11,12 +11,16 @@ const elements = {
     envSelect: document.getElementById('environment'),
     customEnvDiv: document.getElementById('customEnvDiv'),
     customEnvInput: document.getElementById('customEnv'),
+    nglSiteGroup: document.getElementById('nglSiteGroup'),
+    nglSiteSelect: document.getElementById('nglSite'),
     reportSelect: document.getElementById('reportName'),
     customReportDiv: document.getElementById('customReportDiv'),
     customReportInput: document.getElementById('customReport'),
     issueSelect: document.getElementById('issueDescription'),
     customIssueDiv: document.getElementById('customIssueDiv'),
     customIssueInput: document.getElementById('customIssue'),
+    percentageGroup: document.getElementById('percentageGroup'),
+    percentageInput: document.getElementById('percentageInput'),
     rootCauseSelect: document.getElementById('rootCause'),
     customRootCauseDiv: document.getElementById('customRootCauseDiv'),
     customRootCauseInput: document.getElementById('customRootCause'),
@@ -49,7 +53,27 @@ function selectTemplate(type) {
 function updatePreview() {
     // Get environment
     let env = elements.envSelect.value;
-    if (env === 'other') env = elements.customEnvInput.value.toUpperCase();
+    let envForSubject = env; // For subject line (might be UNL instead of NGL)
+    
+    if (env === 'other') {
+        env = elements.customEnvInput.value.toUpperCase();
+        envForSubject = env;
+    } else if (env === 'NGL') {
+        // For NGL, use the selected site for timezone
+        const nglSite = elements.nglSiteSelect.value;
+        if (!nglSite) {
+            elements.previewContent.innerHTML = '<div class="empty-preview">Please select NGL site</div>';
+            return;
+        }
+        env = nglSite; // Use site name for timezone lookup
+        
+        // If UNL, use "UNL" in subject instead of "NGL"
+        if (nglSite === 'UNL') {
+            envForSubject = 'UNL';
+        } else {
+            envForSubject = 'NGL';
+        }
+    }
     
     const ticketNumber = document.getElementById('ticketNumber').value;
     const emailType = document.querySelector('input[name="emailType"]:checked').value;
@@ -60,7 +84,7 @@ function updatePreview() {
         return;
     }
     
-    const fullTicket = `${env}-${ticketNumber}`;
+    const fullTicket = `${envForSubject}-${ticketNumber}`;
     let subject = '';
     let htmlBody = '';
     
@@ -70,7 +94,7 @@ function updatePreview() {
         subject = result.subject;
         htmlBody = result.htmlBody;
     } else {
-        const result = generateSystemPreview(fullTicket, emailType);
+        const result = generateSystemPreview(fullTicket, emailType, env);
         if (!result) return;
         subject = result.subject;
         htmlBody = result.htmlBody;
@@ -115,9 +139,10 @@ function generateReportPreview(fullTicket, emailType) {
  * Generate preview for System Issue template
  * @param {string} fullTicket - Full ticket number (e.g., "NCEL-335674")
  * @param {string} emailType - 'opening' or 'resolved'
+ * @param {string} env - Environment code
  * @returns {object|null} Object with subject and htmlBody, or null if validation fails
  */
-function generateSystemPreview(fullTicket, emailType) {
+function generateSystemPreview(fullTicket, emailType, env) {
     const issueDescValue = elements.issueSelect.value;
     
     if (!issueDescValue) {
@@ -126,14 +151,33 @@ function generateSystemPreview(fullTicket, emailType) {
     }
     
     let issueText = issueDescValue;
+    let issueTextWithPercentage = issueDescValue; // For Impact Description only
+    
+    // Handle custom issue
     if (issueDescValue === 'other') {
         issueText = elements.customIssueInput.value;
+        issueTextWithPercentage = issueText;
         if (!issueText) {
             elements.previewContent.innerHTML = '<div class="empty-preview">Fill in custom issue description</div>';
             return null;
         }
     }
     
+    // Check if issue contains "Decrease in bets" (from dropdown OR custom text)
+    const hasDecrease = issueText.toLowerCase().includes('decrease in bets');
+    
+    if (hasDecrease) {
+        const percentage = elements.percentageInput.value;
+        if (!percentage) {
+            elements.previewContent.innerHTML = '<div class="empty-preview">Please enter percentage for decrease</div>';
+            return null;
+        }
+        
+        // Add percentage ONLY to the impact description version
+        issueTextWithPercentage = `${issueText} (~${percentage}%)`;
+    }
+    
+    // Subject and main text use issueText WITHOUT percentage
     const subject = `${fullTicket} - Critical Notification - ${issueText}`;
     
     const startTime = document.getElementById('startTime').value;
@@ -145,12 +189,14 @@ function generateSystemPreview(fullTicket, emailType) {
         rootCause = elements.customRootCauseInput.value;
     }
     
-    const formattedStartTime = startTime ? formatDateTime(startTime) : '';
-    const formattedEndTime = endTime ? formatDateTime(endTime) : '';
+    // Format times with timezone conversion
+    const formattedStartTime = startTime ? formatDateTime(startTime, env) : '';
+    const formattedEndTime = endTime ? formatDateTime(endTime, env) : '';
     
+    // Pass both versions: issueText (without %) and issueTextWithPercentage (with %)
     const htmlBody = emailType === 'opening'
-        ? generateSystemOpeningHTML(issueText, formattedStartTime, rootCause)
-        : generateSystemResolvedHTML(issueText, formattedStartTime, formattedEndTime, rootCause);
+        ? generateSystemOpeningHTML(issueText, issueTextWithPercentage, formattedStartTime, rootCause)
+        : generateSystemResolvedHTML(issueText, issueTextWithPercentage, formattedStartTime, formattedEndTime, rootCause);
     
     return { subject, htmlBody };
 }
@@ -162,13 +208,50 @@ function generateSystemPreview(fullTicket, emailType) {
 function handleFormSubmit(e) {
     e.preventDefault();
     
-    const htmlContent = elements.previewContent.innerHTML;
+    // Get only the email content (without preview wrapper styles)
+    const previewHtml = elements.previewContent.innerHTML;
     
-    copyToClipboard(htmlContent, () => {
+    // Extract just the email body (skip subject line)
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(previewHtml, 'text/html');
+    
+    // Find the actual email content (after the hr separator)
+    const hrElement = doc.querySelector('hr');
+    let emailContent = '';
+    
+    if (hrElement) {
+        let node = hrElement.nextSibling;
+        while (node) {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                emailContent += node.outerHTML;
+            } else if (node.nodeType === Node.TEXT_NODE) {
+                emailContent += node.textContent;
+            }
+            node = node.nextSibling;
+        }
+    } else {
+        // Fallback: copy everything
+        emailContent = previewHtml;
+    }
+    
+    copyToClipboard(emailContent, () => {
+        // Visual feedback: change button text and style
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        const originalBg = submitBtn.style.background;
+        
+        submitBtn.innerHTML = '✅ Copied!';
+        submitBtn.style.background = '#48bb78';
+        
+        // Show success message
         elements.successMessage.classList.add('show');
+        
+        // Reset after 3 seconds
         setTimeout(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.style.background = originalBg;
             elements.successMessage.classList.remove('show');
-        }, 5000);
+        }, 3000);
     });
 }
 
@@ -178,8 +261,21 @@ function handleFormSubmit(e) {
 function setupEventListeners() {
     // Environment select
     elements.envSelect.addEventListener('change', function() {
-        elements.customEnvDiv.classList.toggle('show', this.value === 'other');
-        elements.customEnvInput.required = this.value === 'other';
+        const isOther = this.value === 'other';
+        const isNGL = this.value === 'NGL';
+        
+        elements.customEnvDiv.classList.toggle('show', isOther);
+        elements.customEnvInput.required = isOther;
+        
+        // Show/hide NGL site selector
+        elements.nglSiteGroup.classList.toggle('hidden', !isNGL);
+        elements.nglSiteSelect.required = isNGL;
+        
+        // Clear NGL site if not needed
+        if (!isNGL) {
+            elements.nglSiteSelect.value = '';
+        }
+        
         updatePreview();
     });
     
@@ -192,8 +288,43 @@ function setupEventListeners() {
     
     // Issue description select
     elements.issueSelect.addEventListener('change', function() {
-        elements.customIssueDiv.classList.toggle('show', this.value === 'other');
-        elements.customIssueInput.required = this.value === 'other';
+        const selectedValue = this.value;
+        const isOther = selectedValue === 'other';
+        
+        // Check if selected option contains "decrease in bets"
+        const hasDecrease = selectedValue.toLowerCase().includes('decrease in bets');
+        
+        // Show/hide custom issue field
+        elements.customIssueDiv.classList.toggle('show', isOther);
+        elements.customIssueInput.required = isOther;
+        
+        // Show/hide percentage field if "decrease in bets" is detected
+        elements.percentageGroup.classList.toggle('hidden', !hasDecrease);
+        elements.percentageInput.required = hasDecrease;
+        
+        // Clear percentage if not needed
+        if (!hasDecrease) {
+            elements.percentageInput.value = '';
+        }
+        
+        updatePreview();
+    });
+    
+    // Custom issue input - check for "Decrease in bets" in text
+    elements.customIssueInput.addEventListener('input', function() {
+        const text = this.value.toLowerCase();
+        const hasDecrease = text.includes('decrease in bets');
+        
+        // Show percentage field if text contains "decrease in bets"
+        if (elements.issueSelect.value === 'other') {
+            elements.percentageGroup.classList.toggle('hidden', !hasDecrease);
+            elements.percentageInput.required = hasDecrease;
+            
+            if (!hasDecrease) {
+                elements.percentageInput.value = '';
+            }
+        }
+        
         updatePreview();
     });
     
@@ -217,6 +348,9 @@ function setupEventListeners() {
         el.addEventListener('input', updatePreview);
         el.addEventListener('change', updatePreview);
     });
+    
+    // NGL site select - update preview
+    elements.nglSiteSelect.addEventListener('change', updatePreview);
     
     // Form submission
     elements.form.addEventListener('submit', handleFormSubmit);
